@@ -1,0 +1,137 @@
+Nexus:
+------
+
+Artifactory repositories:
+--------------------------
+JFrog Artifactory and 
+
+Sonartype Nexus
+Nexus: --> Nexus is an OSS(Open source software), Java based artifactory repository
+- it can be used to store the build artifacts(packages) ie., packages are different for different programming languages
+
+	Java --> jar,war,ear
+	Docker --> Docker images
+	Nodejs --> tar files
+
+What are the difference b/w GitHub and Nexus?
+	- GitHub is a SCM, it is used for managing the source code
+	- Nexus is an artifact repository manager, it is used to store artifacts
+	- we can store the artufacts in github but that's not a good practice since bwe cannot retrieve as and 	  	  whenever we wanted
+	- we can retrieve from artifact and deploy log files and certificates cannot be stored and deployed
+	- monitoring tool called as splunk can also store log files which is again not a good practice
+	- Artifact means package
+Nexus Installation:
+-------------------
+Maven ---> JDK
+SonarQube/Tomcat/Jenkins/Nexus ---> JRE 1.8.0
+4 GB RAM --> t2.medium --> 2CPU utilization --> 1 CPU is for Nexus and other 1CPU is for OS
+
+- Create Nexus server and switch to root user
+- check for java installation by giving java -version
+- install JRE --> yum install java-1.8.0-openjdk -y
+- yum install tar wget -y --> install tar package to download the packages from build tool
+- Nexus repository download page --> https://help.sonatype.com/repomanager3/product-information/download
+- wget https://download.sonatype.com/nexus/3/nexus-3.45.0-01-unix.tar.gz --> install nexus AR  
+- to extract nexus s/w compressed file ---> tar -zxvf nexus-3.45.0-01-unix.tar.gz
+- check your etc dir' --> cd etc/ and ls to view 
+- cd .. and cd .. --> go back to nexus
+- cd sonatype-work/ --> ls
+- go back to nexus --> change nexus s/w dir' name --> mv nexus-3.45.0-01 nexus and ls
+- create nexus user --> useradd nexus
+- provide root privileges to nexus user by visudo--> nexus ALL=(ALL) NOPASSWD: ALL
+- change owner for nexus dir from root to nexus --> chown -R nexus:nexus /opt/nexus
+- change owner for sonatype-work dir from root to nexus --> chown -R nexus:nexus /opt/sonatype-work
+- change mode for nexus dir --> chmod -R 775 /opt/nexus
+- change mode for sonatype-work dir --> chmod -R 775 /opt/sonatype-work and ls -l to view the permissions provided
+- to provide run-as-user for nexus user --> vi /opt/nexus/bin/nexus.rc --> uncomment run-as-user="nexus"
+- ln -s /opt/nexus/bin/nexus /etc/init.d/nexus --> create a soft link for opt to etc dir'
+- switch to nexus user - sudo su - nexus
+- sudo systemctl enable nexus ---> enabling nexus service
+- sudo systemctl start nexus ---> starting nexus service
+- sudo systemctl status nexus ---> status of  nexus service
+- go to aws console ec2 security --> security groups --> edit inbound rules--> alltcp and allipv4--> save rule
+- copy public ipv4 address:8081 --> open nexus repo in browser where 8081 is default portno. for jfrog and nexus
+- cat /opt/sonatype-work/nexus3/admin.password --> view default password for default admin username
+- copy taoken provided and give as password
+- change password as admin123 or as you required 
+- cd /opt/nexus/etc --> switch to etc dir'
+- sudo vi nexus-default.properties
+	application.port=9980
+	nexus-context- --path=/contextpathname
+	:wq
+- sudo systemctl restart nexus --> restart service after configuration
+- change port number with ip address on browser and open the nexus repo with username and password
+
+Nexus - 2:
+----------
+- connect to nexus server
+- logging to nexus repo through oublic ipv4:9980/contextpath
+- give credentials : username and password
+- goto server admistration tab
+	- click on repo
+	- select maven2(hosted) - as we are doing artifacts deploy for java based projects
+	- create repo
+	- give repo name with version policy as release
+	- create repo
+	- repeate same process with version policy as snapshot
+- copy both repo url to configure in maven server
+release: http://13.234.66.89:9980/pavithradevops/repository/citibank-release/
+snapshot: http://13.234.66.89:9980/pavithradevops/repository/citibank-snapshot/
+- in pom.xml do the integration config' for maven and sonarqube <properties></properties>
+- in pom.xml do the integration config' for maven and nexus <disributionManagement>paste repo url</disributionManagement>
+- nexus credential configuration can be done in settings.xml <server></server>
+- check whether there're any packages in repo created in nexus
+- mvn clean deploy--> deploy the artifcats into remote repo
+- in pom.xml under <version> if it is named as snapshot then all the deployment of dependencies will be done in snapshot policy ie., under development environment
+- dependencies can be deployed n no.of time when the code changes are made by developer and under snapshot policy it'll get deployed
+- to do deployment under release policy ie., when code is ready for deployment under production environment then the dependency deployment can be done in release policy
+- to make n no.of build under release policy we need to enable allow redeploy and change the version name
+ 
+Nexus 2 :(cont...)
+--------------------
+
+- download the jar files http://43.204.228.195:9980/pavithradevops/repository/remoterepo-itech/
+- extract it and the go to remote repo created for organization
+- upload components-->browse any one particular jar file from downloaded .zip file 
+- give groupid, artifactid, version and then click on upload
+- goto that remote repo--> click on to the version of artifact and then click on the jar file
+- a window will open in right hand side and the from there select the code snippet and copy
+- paste the to config' in pom.xml file under <dependencies></dependencies>:wq
+- make a build : mvn clean package---> to download the package of those artifacts which can be implemnented in all other projects
+- this will fetch you error as thr repo' is not config' in maven server
+
+remorerepo: http://43.204.228.195:9980/pavithradevops/repository/remoterepo-itech/
+
+- in pom.xml do the configuration for remote repo' so that maven server can fetch all the packages for the depencies in nexus remote repo
+
+ <repositories>
+                <repository>
+                        <id>nexus</id>
+                        <url>http://43.204.228.195:9980/pavithradevops/repository/remoterepo-itech/</url>
+                </repository>
+ </repositories>
+
+ <mirror>
+     <mirror>
+      <id>nexus</id>
+      <mirrorOf>external:http:*</mirrorOf>
+      <url>http://43.204.228.195:9980/pavithradevops/repository/remoterepo-itech/</url>
+      <blocked>false</blocked>
+ </mirror>
+-------------x-------------------x----------------x-------------------x-----------------x-----
+
+Nexus 3:
+---------
+Maven2 (proxy): http://13.127.134.96:9980/pavithradevops/repository/proxyrepo-itech/
+
+- do this proxy repo configuration in pom.xml file in maven-web-application project 
+
+Maven2 (group): http://13.127.134.96:9980/pavithradevops/repository/grouprepo-itech/
+
+S3-->three times SSS---> Simple Storage Service---> we can create storages to store files and images
+EC2--> create servers
+
+cleanup policies--> used to remove or clear the content from repo'
+
+LDAP---> Light Weight Directory Access Protocol
+
